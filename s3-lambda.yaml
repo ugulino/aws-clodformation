@@ -1,0 +1,38 @@
+Resources:
+  LambdaVehicles:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Role: 'arn:aws:iam::139233585775:role/service-role/myRoleLambdaS3'
+      Code:
+        ZipFile: |
+          exports.handler = async (s3Event) => {
+            console.log(JSON.stringify(s3Event));
+          }
+      Description: Invoke a function during stack creation.
+      TracingConfig:
+        Mode: Active
+  LambdaVehiclesPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !GetAtt LambdaVehicles.Arn
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref 'AWS::AccountId'
+      SourceArn: !Join 
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':s3:::'
+          - my-bucket-vehicles
+  S3BucketVehicles:
+    Type: 'AWS::S3::Bucket'
+    #DependsOn:
+    #  - LambdaVehiclesPermission
+    Properties:
+      BucketName: my-bucket-vehicles
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: 's3:ObjectCreated:*'
+            Function: !GetAtt LambdaVehicles.Arn
